@@ -4,7 +4,6 @@ import 'cesium/Build/Cesium/Widgets/widgets.css';
 import {
   STATIONS,
   getBoundingRegion,
-  getMidpoint,
   toSamples,
   tideHeightAt,
   tideTrendAt,
@@ -30,9 +29,6 @@ const STATION_COLORS = [
 
 const WATER_COLOR = Cesium.Color.fromCssColorString('#1d77d8').withAlpha(0.55);
 
-// Region midpoint — the single height the (curvature-following) water rectangle uses.
-const [MID_LON, MID_LAT] = getMidpoint(STATIONS);
-
 // Default camera target — coastal point of interest between the stations.
 const DEFAULT_VIEW = { lon: -123.94132449718668, lat: 46.0987439521893 };
 
@@ -49,27 +45,20 @@ function fmtTime(ms: number): string {
 
 /**
  * Absolute WGS84 ellipsoidal height (meters) of the tide water surface at a
- * given lon/lat and time. Each station is lifted into absolute space
- * (z0Ellipsoid + tide), then linearly interpolated along the station axis.
+ * given time. Each station is lifted into absolute space (z0Ellipsoid + tide),
+ * and we take the HIGHER of the two — we care about worst-case high water, and
+ * a single flat max level avoids per-pixel interpolation we can't do live.
  * `offset` is a manual calibration nudge.
  */
 function waterHeightAt(
-  lon: number,
-  lat: number,
   time: number,
   samplesA: TideSample[],
   samplesB: TideSample[],
   offset: number
 ): number {
-  const A = STATIONS[0];
-  const B = STATIONS[1];
-  const zA = A.z0Ellipsoid + tideHeightAt(samplesA, time) / 100 + offset;
-  const zB = B.z0Ellipsoid + tideHeightAt(samplesB, time) / 100 + offset;
-  const abx = B.lon - A.lon;
-  const aby = B.lat - A.lat;
-  const denom = abx * abx + aby * aby || 1;
-  const t = ((lon - A.lon) * abx + (lat - A.lat) * aby) / denom;
-  return zA + (zB - zA) * t;
+  const zA = STATIONS[0].z0Ellipsoid + tideHeightAt(samplesA, time) / 100 + offset;
+  const zB = STATIONS[1].z0Ellipsoid + tideHeightAt(samplesB, time) / 100 + offset;
+  return Math.max(zA, zB);
 }
 
 
@@ -387,14 +376,7 @@ export default function CesiumTideViewer() {
           // FOLLOWS the ellipsoid — unlike a wide perPositionHeight polygon,
           // which sags hundreds of meters below the curved surface mid-span.
           height: new Cesium.ConstantProperty(
-            waterHeightAt(
-              MID_LON,
-              MID_LAT,
-              timeRef.current,
-              samplesARef.current,
-              samplesBRef.current,
-              offsetRef.current
-            )
+            waterHeightAt(timeRef.current, samplesARef.current, samplesBRef.current, offsetRef.current)
           ),
           granularity: Cesium.Math.toRadians(0.04),
           material: WATER_COLOR,
@@ -437,7 +419,7 @@ export default function CesiumTideViewer() {
     const water = waterEntityRef.current;
     if (!water || !water.rectangle) return;
     water.rectangle.height = new Cesium.ConstantProperty(
-      waterHeightAt(MID_LON, MID_LAT, currentTime, samplesA, samplesB, waterOffset)
+      waterHeightAt(currentTime, samplesA, samplesB, waterOffset)
     );
   }, [currentTime, waterOffset, samplesA, samplesB, isReady]);
 
@@ -474,14 +456,7 @@ export default function CesiumTideViewer() {
         if (picked) groundH = Cesium.Cartographic.fromCartesian(picked).height;
       }
       // The rendered water surface is flat at the region-midpoint height.
-      const waterH = waterHeightAt(
-        MID_LON,
-        MID_LAT,
-        t,
-        samplesARef.current,
-        samplesBRef.current,
-        offsetRef.current
-      );
+      const waterH = waterHeightAt(t, samplesARef.current, samplesBRef.current, offsetRef.current);
       setDiag({ camH, groundH, waterH });
     }, 250);
     return () => clearInterval(id);
@@ -510,7 +485,7 @@ export default function CesiumTideViewer() {
           Garibaldi, OR (9437540) &amp; Astoria, OR (9439040)
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          Water surface interpolated between stations (WGS84 / MLLW via VDatum)
+          Water surface = higher of the two stations (WGS84 / MLLW via VDatum)
         </p>
         <button
           onClick={() => setLiveHiRes((v) => !v)}
