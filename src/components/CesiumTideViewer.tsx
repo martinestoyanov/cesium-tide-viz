@@ -306,6 +306,14 @@ export default function CesiumTideViewer() {
       viewer.scene.msaaSamples = 4; // hardware anti-aliasing
       viewer.scene.globe.depthTestAgainstTerrain = true; // occlude water/geometry behind terrain
 
+      // Full, unconstrained camera control (pan / tilt / zoom / rotate / look).
+      const ssc = viewer.scene.screenSpaceCameraController;
+      ssc.enableRotate = true;
+      ssc.enableTranslate = true;
+      ssc.enableZoom = true;
+      ssc.enableTilt = true;
+      ssc.enableLook = true;
+
       // Initial camera: oblique view onto the coastal point of interest.
       viewer.camera.setView({
         destination: Cesium.Cartesian3.fromDegrees(DEFAULT_VIEW.lon, DEFAULT_VIEW.lat - 0.025, 3500),
@@ -566,25 +574,6 @@ export default function CesiumTideViewer() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none">
         <div className="w-5 h-5 border border-white/70 rounded-full" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-1 h-1 bg-white rounded-full" />
-      </div>
-
-      {/* Legend */}
-      <div className="absolute top-4 right-4 z-10 bg-black/75 backdrop-blur-md rounded-xl px-4 py-3 text-white text-xs">
-        <div className="font-semibold mb-2 text-gray-300 uppercase tracking-wider">Legend</div>
-        <div className="flex items-center gap-2 mb-1">
-          <div className="w-3 h-3 rounded-full bg-red-500" />
-          <span>Garibaldi (9437540)</span>
-        </div>
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-3 h-3 rounded-full bg-violet-500" />
-          <span>Astoria (9439040)</span>
-        </div>
-        <div className="border-t border-white/10 pt-2 mt-1">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-sky-500/55" />
-            <span>Tide water surface</span>
-          </div>
-        </div>
       </div>
 
       {/* Time slider */}
