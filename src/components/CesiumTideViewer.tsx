@@ -372,11 +372,15 @@ export default function CesiumTideViewer() {
             boundingRegion.east,
             boundingRegion.north
           ),
-          // Constant absolute height, but a finely tessellated rectangle that
-          // FOLLOWS the ellipsoid — unlike a wide perPositionHeight polygon,
-          // which sags hundreds of meters below the curved surface mid-span.
-          height: new Cesium.ConstantProperty(
-            waterHeightAt(timeRef.current, samplesARef.current, samplesBRef.current, offsetRef.current)
+          // Dynamic absolute height on a finely tessellated rectangle that
+          // FOLLOWS the ellipsoid (a wide perPositionHeight polygon would sag
+          // hundreds of meters below the curved surface mid-span). A
+          // CallbackProperty keeps the geometry dynamic so height changes update
+          // in place instead of rebuilding the rectangle (which flashed).
+          height: new Cesium.CallbackProperty(
+            () =>
+              waterHeightAt(timeRef.current, samplesARef.current, samplesBRef.current, offsetRef.current),
+            false
           ),
           granularity: Cesium.Math.toRadians(0.04),
           material: WATER_COLOR,
@@ -413,15 +417,6 @@ export default function CesiumTideViewer() {
   useEffect(() => {
     if (osipLayerRef.current) osipLayerRef.current.show = osipImagery;
   }, [osipImagery, isReady]);
-
-  // Update the water rectangle's height whenever time or offset changes.
-  useEffect(() => {
-    const water = waterEntityRef.current;
-    if (!water || !water.rectangle) return;
-    water.rectangle.height = new Cesium.ConstantProperty(
-      waterHeightAt(currentTime, samplesA, samplesB, waterOffset)
-    );
-  }, [currentTime, waterOffset, samplesA, samplesB, isReady]);
 
   // Playback: advance the scrubber smoothly, looping within the data window.
   useEffect(() => {
