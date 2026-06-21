@@ -1,0 +1,33 @@
+/* Cesium widget fills the container */
+.cesium-widget,
+.cesium-viewer {
+  width: 100%;
+  height: 100%;
+}
+
+/* Ensure the viewer canvas takes full space */
+.cesium-viewer-cesiumWidgetContainer {
+  width: 100%;
+  height: 100%;
+}
+
+/* Range slider styling */
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0ea5e9;
+  cursor: pointer;
+  border: 2px solid white;
+}
+
+input[type='range']::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #0ea5e9;
+  cursor: pointer;
+  border: 2px solid white;
+}
